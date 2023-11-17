@@ -156,7 +156,7 @@ private:
          val = v;
       } else {
          val = 0;
-         if (pc + v >= code.size()) {
+         if (pc + v > code.size()) {
             std::cerr << "Error: Unexpected end of code." << std::endl;
             exit(1);
          }

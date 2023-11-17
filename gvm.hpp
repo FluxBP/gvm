@@ -374,7 +374,7 @@ private:
          val = v;
       } else {
          val = 0;
-         if (PC + v >= code.size()) {
+         if (PC + v > code.size()) {
             term = ERR_CODESIZE;
             return 0;
          }
