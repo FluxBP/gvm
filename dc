@@ -1,0 +1,3 @@
+g++ -ggdb -g3 gvm.cpp -o gvm
+g++ -ggdb -g3 gasm.cpp -o gasm
+g++ -ggdb -g3 gdis.cpp -o gdis

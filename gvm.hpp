@@ -207,19 +207,23 @@ public:
          case OP_DIV:
             op1 = read();
             op2 = read();
-            if (op2 != 0)
+            if (op2 != 0) {
                R = op1 / op2;
-            else
+               break;
+            } else {
                term = ERR_DIVZERO;
-            break;
+               break;
+            }
          case OP_MOD:
             op1 = read();
             op2 = read();
-            if (op2 != 0)
+            if (op2 != 0) {
                R = op1 % op2;
-            else
+               break;
+            } else {
                term = ERR_DIVZERO;
-            break;
+               break;
+            }
          case OP_OR:
             op1 = read();
             op2 = read();
@@ -264,12 +268,13 @@ public:
          case OP_POP:
             if (stack.size() == 0) {
                term = ERR_UNDERFLOW;
+               break;
             } else {
                op1 = read();
                get(op1) = stack.back();
                stack.pop_back();
+               break;
             }
-            break;
          case OP_BAND:
             op1 = read();
             op2 = read();
@@ -301,23 +306,31 @@ public:
             op1 = read(); // convenience return value
             if (context.size() == 0) {
                term = ERR_RET;
+               break;
             } else {
                memcpy(&(io[0]), context.back().data(), sizeof(uint64_t) * REG_SIZE);
                context.pop_back();
                R = op1; // R is assigned the return value instead of restored
                break;
             }
-            break;
          case OP_JF:
             op1 = read();
-            op2 = read(true);
-            if (!op1)
-               PC = op2;
+            if (!op1) {
+               PC = read(true);
+               break;
+            } else {
+               PC += 2;
+               break;
+            }
          case OP_JT:
             op1 = read();
-            op2 = read(true);
-            if (op1)
-               PC = op2;
+            if (op1) {
+               PC = read(true);
+               break;
+            } else {
+               PC += 2;
+               break;
+            }
          case OP_EQ:
             op1 = read();
             op2 = read();
