@@ -6,14 +6,12 @@
 
   At the end of execution, 'term' contains the machine return code (ERR_*).
 
-  Registers are stored in an array 'r' with elements [0, REG_SIZE-1]. 'r' is
-  just an alias to the first REG_SIZE elements in 'io', which is the memory
-  of the machine that's shared between the host program and the GVM program.
+  Registers are the memory ('io') cell range [0, REG_SIZE-1].
 
   Special registers:
-    r[0]: PC
-    r[1]: R
-    r[2]: S
+    io[0]: PC
+    io[1]: R
+    io[2]: S
 
   All other registers are free for the GVM host and running bytecode to use
   for whatever purposes.
@@ -22,33 +20,15 @@
   The void(void) callback function provided to the GVM upon construction can
   then read and write the state of the GVM at will before returning to the GVM.
 
+  Several opcodes can have the ISTACK and OSTACK bits set to modify their
+  default register-based implementation to a stack-based implementation. Since
+  the opcode is just 1 byte, these two flags limit the opcode range to [0, 63].
+
   -----------------------------------------------------------------------------
 
   TODO:
 
-  - convert mathematical expressions into GASM instructions (generates
-    arithmetic and stack instructions)
-  - higher level macros
-    - IF expression
-      ...
-      END
-    - IF expression
-      ...
-      ELSE
-      ...
-      END
-    - WHILE expression
-      ...
-      REPEAT
-    - [@]# = expression
-  - #include "xxx.h"
-  - parse simple C constant declarations
-    - enum {
-         NAME = VALUE_OR_NAME ;
-      };
-    - const uint64_t NAME = VALUE_OR_NAME ;
-  - GASM default parameters for instructions
-  - use highest 2 bits of the opcode to denote R and/or S operands
+  - ISTACK / OSTACK bits supported on their own (or just use 1 bit for both)
 
 */
 
@@ -56,6 +36,10 @@
 #include <cstring>
 #include <vector>
 #include <functional>
+
+#ifdef DEBUG
+#include <iostream>
+#endif
 
 enum {
    ERR_OK         = 0,  // program terminated successfully
@@ -108,6 +92,10 @@ const uint8_t REG_PTR = 0x80; // misnomer: this is a pointer to the memory (io)
 const uint8_t SHORT_VAL = 0x40;
 const uint8_t MAX_SHORT_VAL = 0x3F; // 63 (also control byte bitmask)
 
+const uint8_t OP_ISTACK = 0x40; // stack-operands opcode (vs. register-operands opcode)
+const uint8_t OP_OSTACK = 0x80; // stack-result opcode (vs. register-result opcode)
+const uint8_t STACK = OP_ISTACK | OP_OSTACK;
+
 const uint64_t IO_SIZE = 1024; // 8 Kb of IO memory
 const uint64_t REG_SIZE = 8;
 const uint64_t DEFAULT_OP_LIMIT = 50000;
@@ -143,17 +131,33 @@ public:
    uint64_t                        count;  // counts machine instructions executed
    uint8_t                         opcode; // last opcode executed
 
+#ifdef DEBUG
+   bool debug;
+#endif
+
    GVM(uint64_t (&io)[IO_SIZE], std::vector<uint8_t>& code)
-      : io(io), code(code), hostCallback(nullptr) {}
+      : io(io), code(code), hostCallback(nullptr)
+      {
+#ifdef DEBUG
+         debug = false;
+#endif
+      }
 
    GVM(uint64_t (&io)[IO_SIZE], std::vector<uint8_t>& code, const HostCallback& hostCallback)
-      : io(io), code(code), hostCallback(hostCallback) {}
+      : io(io), code(code), hostCallback(hostCallback)
+      {
+#ifdef DEBUG
+         debug = false;
+#endif
+      }
+
+#ifdef DEBUG
+   void setDebug(bool newDebug) { debug = newDebug; }
+#endif
 
    void setCode(std::vector<uint8_t>& newCode) { code = newCode; }
 
    void setHostCallback(const HostCallback& newHostCallback) { hostCallback = newHostCallback; }
-
-   void clearRegisters() { std::memset(&(io[0]), 0, sizeof(uint64_t) * REG_SIZE); }
 
    uint64_t& get(uint64_t index) {
       if (index < IO_SIZE) {
@@ -174,6 +178,21 @@ public:
             break;
          }
          opcode = code[PC++];
+#ifdef DEBUG
+         if (debug) {
+            std::cout << "PC=" << std::to_string(PC - 1) << " R=" << std::to_string(R) << " OPC=" << std::to_string(opcode) << " PEEK=[";
+            for (int i=1; i<5; ++i)
+               if (PC + i < code.size()) {
+                  if (i > 1)
+                     std::cout << ", ";
+                  std::cout << std::to_string(code[PC + i]);
+               }
+            std::cout << "] STK(" << stack.size() << "): ";
+            for (const auto& element : stack)
+               std::cout << element << " ";
+            std::cout << std::endl;
+         }
+#endif
          switch (opcode) {
          case OP_NOP:
             break;
@@ -194,21 +213,46 @@ public:
             op2 = read();
             R = op1 + op2;
             break;
+         case OP_ADD | STACK:
+            op2 = pop();
+            op1 = pop();
+            push(op1 + op2);
+            break;
          case OP_SUB:
             op1 = read();
             op2 = read();
             R = op1 - op2;
+            break;
+         case OP_SUB | STACK:
+            op2 = pop();
+            op1 = pop();
+            push(op1 - op2);
             break;
          case OP_MUL:
             op1 = read();
             op2 = read();
             R = op1 * op2;
             break;
+         case OP_MUL | STACK:
+            op2 = pop();
+            op1 = pop();
+            push(op1 * op2);
+            break;
          case OP_DIV:
             op1 = read();
             op2 = read();
             if (op2 != 0) {
                R = op1 / op2;
+               break;
+            } else {
+               term = ERR_DIVZERO;
+               break;
+            }
+         case OP_DIV | STACK:
+            op2 = pop();
+            op1 = pop();
+            if (op2 != 0) {
+               push(op1 / op2);
                break;
             } else {
                term = ERR_DIVZERO;
@@ -224,14 +268,34 @@ public:
                term = ERR_DIVZERO;
                break;
             }
+         case OP_MOD | STACK:
+            op2 = pop();
+            op1 = pop();
+            if (op2 != 0) {
+               push(op1 % op2);
+               break;
+            } else {
+               term = ERR_DIVZERO;
+               break;
+            }
          case OP_OR:
             op1 = read();
             op2 = read();
             R = op1 | op2;
             break;
+         case OP_OR | STACK:
+            op2 = pop();
+            op1 = pop();
+            push(op1 | op2);
+            break;
          case OP_AND:
             op1 = read();
             op2 = read();
+            R = op1 && op2;
+            break;
+         case OP_AND | STACK:
+            op2 = pop();
+            op1 = pop();
             R = op1 && op2;
             break;
          case OP_XOR:
@@ -239,19 +303,38 @@ public:
             op2 = read();
             R = op1 ^ op2;
             break;
+         case OP_XOR | STACK:
+            op2 = pop();
+            op1 = pop();
+            push(op1 ^ op2);
+            break;
          case OP_NOT:
             op1 = read();
             R = ~op1;
+            break;
+         case OP_NOT | STACK:
+            op1 = pop();
+            push(~op1);
             break;
          case OP_SHL:
             op1 = read();
             op2 = read();
             R = op1 << op2;
             break;
+         case OP_SHL | STACK:
+            op2 = pop();
+            op1 = pop();
+            push(op1 << op2);
+            break;
          case OP_SHR:
             op1 = read();
             op2 = read();
             R = op1 >> op2;
+            break;
+         case OP_SHR | STACK:
+            op2 = pop();
+            op1 = pop();
+            push(op1 >> op2);
             break;
          case OP_INC:
             op1 = read();
@@ -263,22 +346,21 @@ public:
             break;
          case OP_PUSH:
             op1 = read();
-            stack.push_back(op1);
+            push(op1);
             break;
          case OP_POP:
-            if (stack.size() == 0) {
-               term = ERR_UNDERFLOW;
-               break;
-            } else {
-               op1 = read();
-               get(op1) = stack.back();
-               stack.pop_back();
-               break;
-            }
+            op1 = read();
+            get(op1) = pop();
+            break;
          case OP_BAND:
             op1 = read();
             op2 = read();
             R = op1 & op2;
+            break;
+         case OP_BAND | STACK:
+            op2 = pop();
+            op1 = pop();
+            push(op1 & op2);
             break;
          case OP_HOST:
             hostCallback();
@@ -322,8 +404,28 @@ public:
                PC += 2;
                break;
             }
+         case OP_JF | STACK: // support hacky gasm
+         case OP_JF | OP_ISTACK:
+            op1 = pop();
+            if (!op1) {
+               PC = read(true);
+               break;
+            } else {
+               PC += 2;
+               break;
+            }
          case OP_JT:
             op1 = read();
+            if (op1) {
+               PC = read(true);
+               break;
+            } else {
+               PC += 2;
+               break;
+            }
+         case OP_JT | STACK: // support hacky gasm
+         case OP_JT | OP_ISTACK:
+            op1 = pop();
             if (op1) {
                PC = read(true);
                break;
@@ -336,30 +438,60 @@ public:
             op2 = read();
             R = op1 == op2;
             break;
+         case OP_EQ | STACK:
+            op2 = pop();
+            op1 = pop();
+            push(op1 == op2);
+            break;
          case OP_NE:
             op1 = read();
             op2 = read();
             R = op1 != op2;
+            break;
+         case OP_NE | STACK:
+            op2 = pop();
+            op1 = pop();
+            push(op1 != op2);
             break;
          case OP_GT:
             op1 = read();
             op2 = read();
             R = op1 > op2;
             break;
+         case OP_GT | STACK:
+            op2 = pop();
+            op1 = pop();
+            push(op1 > op2);
+            break;
          case OP_LT:
             op1 = read();
             op2 = read();
             R = op1 < op2;
+            break;
+         case OP_LT | STACK:
+            op2 = pop();
+            op1 = pop();
+            push(op1 < op2);
             break;
          case OP_GE:
             op1 = read();
             op2 = read();
             R = op1 >= op2;
             break;
+         case OP_GE | STACK:
+            op2 = pop();
+            op1 = pop();
+            push(op1 >= op2);
+            break;
          case OP_LE:
             op1 = read();
             op2 = read();
             R = op1 <= op2;
+            break;
+         case OP_LE | STACK:
+            op2 = pop();
+            op1 = pop();
+            push(op1 <= op2);
             break;
          default:
             term = ERR_OPCODE;
@@ -368,6 +500,18 @@ public:
    }
 
 private:
+
+   void push(uint64_t v) { stack.push_back(v); }
+
+   uint64_t pop() {
+      if (stack.size() == 0) {
+         term = ERR_UNDERFLOW;
+         return 0; // whatever; program is dead
+      }
+      uint64_t operand = stack.back();
+      stack.pop_back();
+      return operand;
+   }
 
    uint64_t read(bool jump_skip_control = false) {
       if (PC >= code.size()) {

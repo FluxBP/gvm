@@ -7,6 +7,7 @@
   gvm.setCallback(std::bind(&MyClass::myCallbackMethod, &myObject));
 */
 
+#define DEBUG
 #include "gvm.hpp"
 
 #include <iostream>
@@ -20,10 +21,14 @@ void example_host_function() {
 }
 
 int main(int argc, char* argv[]) {
-   if (argc != 2) {
-      std::cerr << "Usage: " << argv[0] << " <filename>" << std::endl;
+   std::memset(&(io[0]), 0, sizeof(uint64_t) * IO_SIZE);
+
+   if (argc < 2) {
+      std::cerr << "Usage: " << argv[0] << " <filename> [--debug]" << std::endl;
       return 1;
    }
+
+   bool debug = (argc > 2);
 
    // Load the bytecode
    const char* filename = argv[1];
@@ -37,7 +42,7 @@ int main(int argc, char* argv[]) {
 
    // Run the bytecode
    vm = new GVM(io, code, example_host_function);
-   vm->clearRegisters();
+   vm->setDebug(debug);
    vm->run();
    std::cout << "vm.run() ended, term = " << vm->term << " opcode = " << int(vm->opcode) << std::endl;
 

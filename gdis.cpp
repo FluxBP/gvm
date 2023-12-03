@@ -28,6 +28,10 @@ public:
       while (pc < code.size()) {
          std::cout << "L" << std::setfill('0') << std::setw(5) << pc << std::setfill(' ') << std::setw(0) << ": ";
          uint8_t opcode = code[pc++];
+
+         bool stk = (opcode & OP_ISTACK) || (opcode & OP_OSTACK); // stk will modify the expected operands
+         opcode &= ~(OP_ISTACK | OP_OSTACK); // get rid of STACK bits to simplify case
+
          switch (opcode) {
          case OP_NOP:
             disasm("NOP", 0);
@@ -42,37 +46,37 @@ public:
             disasm("JMP", 1, true);
             break;
          case OP_ADD:
-            disasm("ADD", 2);
+            disasm("ADD", stk ? 0 : 2);
             break;
          case OP_SUB:
-            disasm("SUB", 2);
+            disasm("SUB", stk ? 0 : 2);
             break;
          case OP_MUL:
-            disasm("MUL", 2);
+            disasm("MUL", stk ? 0 : 2);
             break;
          case OP_DIV:
-            disasm("DIV", 2);
+            disasm("DIV", stk ? 0 : 2);
             break;
          case OP_MOD:
-            disasm("MOD", 2);
+            disasm("MOD", stk ? 0 : 2);
             break;
          case OP_OR:
-            disasm("OR", 2);
+            disasm("OR", stk ? 0 : 2);
             break;
          case OP_AND:
-            disasm("AND", 2);
+            disasm("AND", stk ? 0 : 2);
             break;
          case OP_XOR:
-            disasm("XOR", 2);
+            disasm("XOR", stk ? 0 : 2);
             break;
          case OP_NOT:
-            disasm("NOT", 1);
+            disasm("NOT", stk ? 0 : 1);
             break;
          case OP_SHL:
-            disasm("SHL", 2);
+            disasm("SHL", stk ? 0 : 2);
             break;
          case OP_SHR:
-            disasm("SHR", 2);
+            disasm("SHR", stk ? 0 : 2);
             break;
          case OP_INC:
             disasm("INC", 1);
@@ -87,7 +91,7 @@ public:
             disasm("POP", 1);
             break;
          case OP_BAND:
-            disasm("BAND", 2);
+            disasm("BAND", stk ? 0 : 2);
             break;
          case OP_HOST:
             disasm("HOST", 0);
@@ -105,28 +109,28 @@ public:
             disasm("RET", 1);
             break;
          case OP_JT:
-            disasm("JF", 2, true);
+            disasm("JT", stk ? 1 : 2, true); // SHOULD work: value to test is stk, label is still expected (so 1 instead of 0)
             break;
          case OP_JF:
-            disasm("JT", 2, true);
+            disasm("JF", stk ? 1 : 2, true); // SHOULD work: value to test is stk, label is still expected (so 1 instead of 0)
             break;
          case OP_EQ:
-            disasm("EQ", 2);
+            disasm("EQ", stk ? 0 : 2);
             break;
          case OP_NE:
-            disasm("NE", 2);
+            disasm("NE", stk ? 0 : 2);
             break;
          case OP_GT:
-            disasm("GT", 2);
+            disasm("GT", stk ? 0 : 2);
             break;
          case OP_LT:
-            disasm("LT", 2);
+            disasm("LT", stk ? 0 : 2);
             break;
          case OP_GE:
-            disasm("GE", 2);
+            disasm("GE", stk ? 0 : 2);
             break;
          case OP_LE:
-            disasm("LE", 2);
+            disasm("LE", stk ? 0 : 2);
             break;
          default:
             std::cout << "UNKNOWN_OPCODE_" << int(opcode) << std::endl;
@@ -145,7 +149,7 @@ private:
       }
       uint8_t control;
       if (jump_skip_control)
-         control = 1;
+         control = 2; // WHY was this ever set to 1?
       else
          control = code[pc++];
       uint8_t v = control & MAX_SHORT_VAL;
