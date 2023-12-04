@@ -219,10 +219,8 @@ void writeBinary(const std::string &inputFilename, const std::string &outputFile
             // TODO: this could generate smaller bytecode with OP_SET | OP_ISTACK support:
             //       (may be true for the other expression parsers below)
 
-            // result of exprProg in the stack, so pop it into register R (i.e. @1)
-            oss << "POP 1 "; // << std::endl;
-            // then set the destination register of the macro to the value of R
-            oss << "SET " << regNum << " @1 "; // << std::endl;
+            // result of exprProg in the stack, so pop it into the desired register
+            oss << "POP " << regNum << " ";
 
             line = oss.str();
             macro = true;
