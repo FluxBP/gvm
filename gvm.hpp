@@ -30,6 +30,14 @@
 
   - ISTACK / OSTACK bits supported on their own (or just use 1 bit for both)
 
+  - change BAND to AND    (&)
+  - change AND to LAND    (&&)
+  - add LOR (||)
+  - change expr to treat | and || differently
+    producing OR| and LOR||
+  - update gasm.cpp opcodes
+  - update gdis.cpp opcodes
+
 */
 
 #include <cstdint>
