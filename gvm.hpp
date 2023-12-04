@@ -86,7 +86,8 @@ enum : uint8_t {
    OP_GT          = 29,
    OP_LT          = 30,
    OP_GE          = 31,
-   OP_LE          = 32
+   OP_LE          = 32,
+   OP_NEG         = 33
 };
 
 const uint8_t REG_PTR = 0x80; // misnomer: this is a pointer to the memory (io)
@@ -315,11 +316,11 @@ public:
             break;
          case OP_NOT:
             op1 = read();
-            R = ~op1;
+            R = !op1;
             break;
          case OP_NOT | STACK:
             op1 = pop();
-            push(~op1);
+            push(!op1);
             break;
          case OP_SHL:
             op1 = read();
@@ -497,6 +498,14 @@ public:
             op2 = pop();
             op1 = pop();
             push(op1 <= op2);
+            break;
+         case OP_NEG:
+            op1 = read();
+            R = ~op1;
+            break;
+         case OP_NEG | STACK:
+            op1 = pop();
+            push(~op1);
             break;
          default:
             term = ERR_OPCODE;

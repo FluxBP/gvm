@@ -196,7 +196,7 @@ std::deque<Token> exprToTokens(const std::string& expr) {
                // note#1 : 'n' is a special operator name for unary '~'
                // note#2 : It has highest precedence than any of the infix operators
                unary = true;
-               c = 'n';
+               //c = '~';
                t = Token::Type::Operator;
                precedence = 11;
             } else {
@@ -283,7 +283,7 @@ std::deque<Token> exprToTokens(const std::string& expr) {
                   // note#1 : 'n' is a special operator name for unary '!'
                   // note#2 : It has highest precedence than any of the infix operators
                   unary = true;
-                  c = 'n';
+                  //c = '!';
                   t = Token::Type::Operator;
                   precedence = 11;
                } else {
@@ -496,9 +496,14 @@ std::string expressionToGASM(const std::string& expr, bool lf) {
                
                //    VM literally doesn't support an unary -  since everything is uint64_t
 
-            case 'n':                   // Special operator name for unary '~' (& '!')
-               std::string bla = std::to_string( - std::stoi(rhs.str) );
+            case '~':                   // Special operator name for unary '~'
                rhs.str = std::to_string( ~ std::stoi(rhs.str) );
+               stack.push_back( rhs );
+
+               ossg << "NEG" << sep;
+               break;
+            case '!':                   // Special operator name for unary '~'
+               rhs.str = std::to_string( ! std::stoi(rhs.str) );
                stack.push_back( rhs );
 
                ossg << "NOT" << sep;
