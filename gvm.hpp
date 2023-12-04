@@ -49,7 +49,8 @@ enum {
    ERR_OPLIMIT    = 4,  // reached opcode run limit
    ERR_UNDERFLOW  = 5,  // stack is empty on pop
    ERR_RET        = 6,  // RET without CALL to return from
-   ERR_SEGFAULT   = 7   // invalid io address accessed
+   ERR_SEGFAULT   = 7,  // invalid io address accessed
+   ERR_NEG        = 8   // arithmetic underflow
 };
 
 enum : uint8_t {
@@ -222,11 +223,15 @@ public:
             op1 = read();
             op2 = read();
             R = op1 - op2;
+            if (op1 < op2)
+               term = ERR_NEG;
             break;
          case OP_SUB | STACK:
             op2 = pop();
             op1 = pop();
             push(op1 - op2);
+            if (op1 < op2)
+               term = ERR_NEG;
             break;
          case OP_MUL:
             op1 = read();
@@ -340,7 +345,7 @@ public:
             op1 = read();
             ++get(op1);
             break;
-         case OP_DEC:
+         case OP_DEC: // doesn't do < 0 check
             op1 = read();
             --get(op1);
             break;

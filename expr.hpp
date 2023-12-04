@@ -39,20 +39,6 @@
 
   TODO:
 
-  - add all missing operations
-    ^  xor
-    |
-    &
-    &&
-    >>
-    <<
-    >
-    <
-    ==
-    !=
-    >=
-    <=
-
 */
 
 #include <iostream>
@@ -167,14 +153,22 @@ std::deque<Token> exprToTokens(const std::string& expr) {
          bool rightAssociative = false;
          bool unary = false;
          char c = *p;
+         char c2 = *(p + 1);
+
+         int opsz = 1;
+
          switch(c) {
          default:                                    break;
          case '(':   t = Token::Type::LeftParen;     break;
          case ')':   t = Token::Type::RightParen;    break;
-         //removed case '^':   t = Token::Type::Operator;      precedence = 4; rightAssociative = true;  break;
-         case '*':   t = Token::Type::Operator;      precedence = 3; break;
-         case '/':   t = Token::Type::Operator;      precedence = 3; break;
-         case '+':   t = Token::Type::Operator;      precedence = 2; break;
+
+            //XOR
+         case '^':   t = Token::Type::Operator;      precedence = 4; /*rightAssociative = true;*/  break;
+
+         case '*':   t = Token::Type::Operator;      precedence = 10; break;
+         case '/':   t = Token::Type::Operator;      precedence = 10; break;
+         case '%':   t = Token::Type::Operator;      precedence = 10; break;
+         case '+':   t = Token::Type::Operator;      precedence = 9; break;
          case '-':
             // If current token is '-'
             // and if it is the first token, or preceded by another operator, or left-paren,
@@ -188,7 +182,7 @@ std::deque<Token> exprToTokens(const std::string& expr) {
             } else {
                // otherwise, it's binary '-'
                t = Token::Type::Operator;
-               precedence = 2;
+               precedence = 9;
             }
             break;
          case '~':
@@ -204,15 +198,110 @@ std::deque<Token> exprToTokens(const std::string& expr) {
                unary = true;
                c = 'n';
                t = Token::Type::Operator;
-               precedence = 5;
+               precedence = 11;
             } else {
                //std::cout << "ERROR: ~ is not a binary operator" << std::endl;
                //exit(1);
                throw std::runtime_error("ERROR: ~ is not a binary operator");
             }
             break;
+         case '&':
+            switch (c2) {
+            case '&':   // &&
+               opsz = 2;
+               t = Token::Type::Operator;      precedence = 2; break;
+               break;
+            default:    // just &
+               t = Token::Type::Operator;      precedence = 5; break;
+               break;
+            }
+            break;
+         case '|':
+            switch (c2) {
+            case '|':   // ||
+               opsz = 2;
+               //break;   || and | behave identically
+            default:    // just |
+               t = Token::Type::Operator;      precedence = 3; break;
+               break;
+            }
+            break;
+         case '<':
+            switch (c2) {
+            case '<':   // <<
+               opsz = 2;
+               t = Token::Type::Operator;      precedence = 8; break;
+               break;
+            case '=':   // <=
+               opsz = 2;
+               t = Token::Type::Operator;      precedence = 7; break;
+               break;
+            default:    // <
+               t = Token::Type::Operator;      precedence = 7; break;
+               break;
+            }
+            break;
+         case '>':
+            switch (c2) {
+            case '>':   // >>
+               opsz = 2;
+               t = Token::Type::Operator;      precedence = 8; break;
+               break;
+            case '=':   // >=
+               opsz = 2;
+               t = Token::Type::Operator;      precedence = 7; break;
+               break;
+            default:    // >
+               t = Token::Type::Operator;      precedence = 7; break;
+               break;
+            }
+            break;
+         case '=':
+            switch (c2) {
+            case '=':   // ==
+               opsz = 2;
+               t = Token::Type::Operator;      precedence = 6; break;
+               break;
+            default: break;   // '='  (not supported) -- doing the Unknown token case
+            }
+            break;
+         case '!':
+            switch (c2) {
+            case '=':   // !=
+               opsz = 2;
+               t = Token::Type::Operator;      precedence = 6; break;
+               break;
+            default:    // !   not
+               // If current token is '!'
+               // and if it is the first token, or preceded by another operator, or left-paren,
+               if(   tokens.empty()
+                     || tokens.back().type == Token::Type::Operator
+                     || tokens.back().type == Token::Type::LeftParen
+                  )
+               {
+                  // it's unary '!'
+                  // note#1 : 'n' is a special operator name for unary '!'
+                  // note#2 : It has highest precedence than any of the infix operators
+                  unary = true;
+                  c = 'n';
+                  t = Token::Type::Operator;
+                  precedence = 11;
+               } else {
+                  throw std::runtime_error("ERROR: ! is not a binary operator");
+               }
+               break;
+            }
+            break;
          }
-         const auto s = std::string(1, c);
+         std::string s;
+         if (opsz == 1) {
+            s = std::string(1, c);
+         } else if (opsz == 2) {
+            s = std::string(1, c) + std::string(1, c2);
+            ++p; // skip extra char
+         } else {
+            throw std::runtime_error("ERROR bad opsz");
+         }
          tokens.push_back(Token { t, s, precedence, rightAssociative, unary });
       }
    }
@@ -309,7 +398,7 @@ std::deque<Token> shuntingYard(const std::deque<Token>& tokens) {
 
       default:
          //printf("error (%s)\n", token.str.c_str());
-         throw std::runtime_error("ERROR: (token)");
+         throw std::runtime_error("ERROR: (token): " + token.str);
          return {};
       }
 
@@ -407,7 +496,7 @@ std::string expressionToGASM(const std::string& expr, bool lf) {
                
                //    VM literally doesn't support an unary -  since everything is uint64_t
 
-            case 'n':                   // Special operator name for unary '~'
+            case 'n':                   // Special operator name for unary '~' (& '!')
                std::string bla = std::to_string( - std::stoi(rhs.str) );
                rhs.str = std::to_string( ~ std::stoi(rhs.str) );
                stack.push_back( rhs );
@@ -427,10 +516,15 @@ std::string expressionToGASM(const std::string& expr, bool lf) {
             auto lhs = stack.back();
             stack.pop_back();
 
+            char c2 = ' ';
+            if (token.str.size() > 1) {
+               c2 = token.str[1];
+            }
+
             switch(token.str[0]) {
             default:
                ossg << "UNKNOWN_OPERATION" << sep;
-               
+               throw std::runtime_error("ERROR: Operator error (2)");
                //printf("Operator error [%s]\n", token.str.c_str());
                //exit(0);
                throw std::runtime_error("ERROR: Operator error (2)");
@@ -459,6 +553,112 @@ std::string expressionToGASM(const std::string& expr, bool lf) {
                //stack.push_back(lhs - rhs);
                stack.push_back(Token { Token::Type::Number, zero });
                break;
+
+            case '%':
+               ossg << "MOD" << sep;
+               //stack.push_back(lhs / rhs);
+               stack.push_back(Token { Token::Type::Number, zero });
+               break;
+
+
+         case '&':
+            switch (c2) {
+            case '&':   // &&
+               ossg << "BAND" << sep;
+               stack.push_back(Token { Token::Type::Number, zero });
+               break;
+            case ' ':    // just &
+               ossg << "AND" << sep;
+               stack.push_back(Token { Token::Type::Number, zero });
+               break;
+            default:
+               ossg << "UNKNOWN_OPERATION" << sep;
+               throw std::runtime_error("ERROR: Operator error (8)");
+               break;
+            }
+            break;
+         case '|':
+            switch (c2) {
+            case '|':   // ||
+               //break;   || and | behave identically
+            case ' ':    // just |
+               ossg << "OR" << sep;
+               stack.push_back(Token { Token::Type::Number, zero });
+               break;
+            default:
+               ossg << "UNKNOWN_OPERATION" << sep;
+               throw std::runtime_error("ERROR: Operator error (7)");
+               break;
+            }
+            break;
+         case '<':
+            switch (c2) {
+            case '<':   // <<
+               ossg << "SHL" << sep;
+               stack.push_back(Token { Token::Type::Number, zero });
+               break;
+            case '=':   // <=
+               ossg << "LE" << sep;
+               stack.push_back(Token { Token::Type::Number, zero });
+               break;
+            case ' ':    // <
+               ossg << "LT" << sep;
+               stack.push_back(Token { Token::Type::Number, zero });
+               break;
+            default:
+               ossg << "UNKNOWN_OPERATION" << sep;
+               throw std::runtime_error("ERROR: Operator error (6)");
+               break;
+            }
+            break;
+         case '>':
+            switch (c2) {
+            case '>':   // >>
+               ossg << "SHR" << sep;
+               stack.push_back(Token { Token::Type::Number, zero });
+               break;
+            case '=':   // >=
+               ossg << "GE" << sep;
+               stack.push_back(Token { Token::Type::Number, zero });
+               break;
+            case ' ':    // >
+               ossg << "GT" << sep;
+               stack.push_back(Token { Token::Type::Number, zero });
+               break;
+            default:
+               ossg << "UNKNOWN_OPERATION" << sep;
+               throw std::runtime_error("ERROR: Operator error (5)");
+               break;
+            }
+            break;
+         case '=':
+            switch (c2) {
+            case '=':   // ==
+               ossg << "EQ" << sep;
+               stack.push_back(Token { Token::Type::Number, zero });
+               break;
+            default:    // '='  (not supported) -- doing the Unknown token case
+               ossg << "UNKNOWN_OPERATION" << sep;
+               throw std::runtime_error("ERROR: Operator error (3)");
+               break;
+            }
+            break;
+         case '!':
+            switch (c2) {
+            case '=':   // !=
+               ossg << "NE" << sep;
+               stack.push_back(Token { Token::Type::Number, zero });
+               break;
+            default:
+               ossg << "UNKNOWN_OPERATION" << sep;
+               throw std::runtime_error("ERROR: Operator error (4)");
+               break;
+            }
+            break;
+
+
+               
+               
             }
             //op = "Push " + std::to_string(lhs) + " " + token.str + " " + std::to_string(rhs);
             op = "Push something";
