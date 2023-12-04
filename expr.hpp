@@ -535,9 +535,11 @@ std::string expressionToGASM(const std::string& expr, bool lf) {
                throw std::runtime_error("ERROR: Operator error (2)");
                
                break;
-            //removed case '^':
-            //   stack.push_back(static_cast<int>(pow(lhs, rhs)));
-            //   break;
+            case '^':
+               ossg << "XOR" << sep;
+               //stack.push_back(static_cast<int>(pow(lhs, rhs)));
+               stack.push_back(Token { Token::Type::Number, zero });
+               break;
             case '*':
                ossg << "MUL" << sep;
                //stack.push_back(lhs * rhs);
