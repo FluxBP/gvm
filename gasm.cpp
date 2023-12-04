@@ -76,7 +76,8 @@ std::map<std::string, std::pair<uint8_t, uint8_t>> opcodes = {
    {"GT", {OP_GT,2}},
    {"LT", {OP_LT,2}},
    {"GE", {OP_GE,2}},
-   {"LE", {OP_LE,2}}
+   {"LE", {OP_LE,2}},
+   {"NEG", {OP_NEG,1}}
 };
 
 // every location in the code that referenced a label

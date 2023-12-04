@@ -132,6 +132,9 @@ public:
          case OP_LE:
             disasm("LE", stk ? 0 : 2);
             break;
+         case OP_NEG:
+            disasm("NEG", stk ? 0 : 1);
+            break;
          default:
             std::cout << "UNKNOWN_OPCODE_" << int(opcode) << std::endl;
             break;
