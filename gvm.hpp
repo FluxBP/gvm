@@ -50,7 +50,7 @@ enum {
    ERR_UNDERFLOW  = 5,  // stack is empty on pop
    ERR_RET        = 6,  // RET without CALL to return from
    ERR_SEGFAULT   = 7,  // invalid io address accessed
-   ERR_NEG        = 8   // arithmetic underflow
+   ERR_NEGNUM     = 8   // arithmetic underflow
 };
 
 enum : uint8_t {
@@ -225,14 +225,14 @@ public:
             op2 = read();
             R = op1 - op2;
             if (op1 < op2)
-               term = ERR_NEG;
+               term = ERR_NEGNUM;
             break;
          case OP_SUB | STACK:
             op2 = pop();
             op1 = pop();
             push(op1 - op2);
             if (op1 < op2)
-               term = ERR_NEG;
+               term = ERR_NEGNUM;
             break;
          case OP_MUL:
             op1 = read();

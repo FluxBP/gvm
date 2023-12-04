@@ -13,13 +13,9 @@
 
   TODO:
 
-  - add all missing ops to expr.hpp
-
-  - clean up expr.hpp
+  - nested control macros (if/else/end/while/repeat)
 
   - better REGEXPs for the macros (spaces...)
-
-  - nested control macros (if/else/end/while/repeat)
 
   - #include "xxx.h" macro
 
