@@ -105,7 +105,8 @@ public:
    typedef uint64_t memory_t[IO_SIZE];
 
    // call stack (just a stack of saved register sets;
-   // CALL pushes r into this, RET pops this back into r)
+   // CALL pushes register range of io into this and
+   // RET pops this back into the register range of io)
    std::vector<registers_t>        context;
 
    // global state (not affected by CALL/RET)
@@ -153,15 +154,6 @@ public:
    void setCode(std::vector<uint8_t>& newCode) { code = newCode; }
 
    void setHostCallback(const HostCallback& newHostCallback) { hostCallback = newHostCallback; }
-
-   uint64_t& get(uint64_t index) {
-      if (index < IO_SIZE) {
-         return io[index];
-      } else {
-         term = ERR_SEGFAULT;
-         return R; // whatever; program is dead
-      }
-   }
 
    void run(uint64_t limit = DEFAULT_OP_LIMIT) {
       term = ERR_OK;
@@ -515,6 +507,15 @@ public:
    }
 
 private:
+
+   uint64_t& get(uint64_t index) {
+      if (index < IO_SIZE) {
+         return io[index];
+      } else {
+         term = ERR_SEGFAULT;
+         return R; // whatever; program is dead
+      }
+   }
 
    void push(uint64_t v) { stack.push_back(v); }
 
