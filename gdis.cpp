@@ -29,8 +29,8 @@ public:
          std::cout << "L" << std::setfill('0') << std::setw(5) << pc << std::setfill(' ') << std::setw(0) << ": ";
          uint8_t opcode = code[pc++];
 
-         bool stk = (opcode & OP_ISTACK) || (opcode & OP_OSTACK); // stk will modify the expected operands
-         opcode &= ~(OP_ISTACK | OP_OSTACK); // get rid of STACK bits to simplify case
+         bool stk = opcode & STACK; // stk will modify the expected operands
+         opcode &= ~STACK; // get rid of STACK bit to simplify case
 
          switch (opcode) {
          case OP_NOP:

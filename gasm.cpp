@@ -25,9 +25,6 @@
     };
     - const uint64_t NAME = VALUE_OR_NAME ;
 
-  - Ensure GASM does not tolerate any invalid input
-    (for example, check for ISTACK/OSTACK set on opcodes that don't support it)
-
 */
 
 #include "gvm.hpp"
@@ -122,7 +119,7 @@ int countUsedBytes(uint64_t value) {
 }
 
 void setLastByteToStackOp(const std::string &binaryFilename) {
-   // last byte must be an opcode to toggle to stack operation mode (ISTACK = pop operands from stack | OSTACK = push result to stack)
+   // last byte must be an opcode to toggle to stack operation mode (STACK = pop operands from stack if any and push result to stack if any)
    std::fstream file(binaryFilename, std::ios::in | std::ios::out | std::ios::binary);
    if (!file.is_open()) {
       std::cerr << "Error opening file: " << binaryFilename << std::endl;
@@ -131,8 +128,7 @@ void setLastByteToStackOp(const std::string &binaryFilename) {
    file.seekg(-1, std::ios::end);
    char lastByte;
    file.read(&lastByte, 1);
-   lastByte |= OP_ISTACK;
-   lastByte |= OP_OSTACK;
+   lastByte |= STACK;
    file.seekp(-1, std::ios::end);
    file.write(&lastByte, 1);
    file.close();
@@ -216,9 +212,6 @@ void writeBinary(const std::string &inputFilename, const std::string &outputFile
 
             std::ostringstream oss;
             oss << exprProg;
-
-            // TODO: this could generate smaller bytecode with OP_SET | OP_ISTACK support:
-            //       (may be true for the other expression parsers below)
 
             // result of exprProg in the stack, so pop it into the desired register
             oss << "POP " << regNum << " ";
@@ -521,14 +514,14 @@ void writeBinary(const std::string &inputFilename, const std::string &outputFile
                   // STACK CASE: JF/JT stack version, with the value to test taken from the stack,
                   //             so we find the label immediately
                   //
-                  //TODO: may need to write better code here if we create different jump opcodes with different quantities/order of non-label operands
+                  //TODO/REVIEW: may need to write better code here if we create different jump opcodes
+                  //             with different quantities/order of non-label operands
                   //
                   if (expected > 0 && expected_label_distance == 2) {
 
                      // it's from the stack, so don't expect the operand
                      --expected;
 
-                     // tag as both ISTACK and OSTACK (fine for now)
                      setLastByteToStackOp(outputFilename);
 
                   } else {

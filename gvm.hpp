@@ -20,15 +20,9 @@
   The void(void) callback function provided to the GVM upon construction can
   then read and write the state of the GVM at will before returning to the GVM.
 
-  Several opcodes can have the ISTACK and OSTACK bits set to modify their
-  default register-based implementation to a stack-based implementation. Since
-  the opcode is just 1 byte, these two flags limit the opcode range to [0, 63].
-
-  -----------------------------------------------------------------------------
-
-  TODO:
-
-  - ISTACK / OSTACK bits supported on their own (or just use 1 bit for both)
+  Several opcodes can have the STACK bit set to modify their default
+  register-based implementation to a stack-based implementation. Since the
+  opcode is just 1 byte, this flag limits the opcode range to [0, 127].
 
 */
 
@@ -95,9 +89,7 @@ const uint8_t REG_PTR = 0x80; // misnomer: this is a pointer to the memory (io)
 const uint8_t SHORT_VAL = 0x40;
 const uint8_t MAX_SHORT_VAL = 0x3F; // 63 (also control byte bitmask)
 
-const uint8_t OP_ISTACK = 0x40; // stack-operands opcode (vs. register-operands opcode)
-const uint8_t OP_OSTACK = 0x80; // stack-result opcode (vs. register-result opcode)
-const uint8_t STACK = OP_ISTACK | OP_OSTACK;
+const uint8_t STACK = 0x80; // opcode reads/writes the stack instead
 
 const uint64_t IO_SIZE = 1024; // 8 Kb of IO memory
 const uint64_t REG_SIZE = 8;
@@ -411,8 +403,7 @@ public:
                PC += 2;
                break;
             }
-         case OP_JF | STACK: // support hacky gasm
-         case OP_JF | OP_ISTACK:
+         case OP_JF | STACK:
             op1 = pop();
             if (!op1) {
                PC = read(true);
@@ -430,8 +421,7 @@ public:
                PC += 2;
                break;
             }
-         case OP_JT | STACK: // support hacky gasm
-         case OP_JT | OP_ISTACK:
+         case OP_JT | STACK:
             op1 = pop();
             if (op1) {
                PC = read(true);
