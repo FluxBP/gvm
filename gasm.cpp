@@ -54,7 +54,7 @@ std::map<std::string, std::pair<uint8_t, uint8_t>> opcodes = {
    {"DIV", {OP_DIV,2}},
    {"MOD", {OP_MOD,2}},
    {"OR", {OP_OR,2}},
-   {"AND", {OP_AND,2}},
+   {"ANDL", {OP_ANDL,2}},
    {"XOR", {OP_XOR,2}},
    {"NOT", {OP_NOT,1}},
    {"SHL", {OP_SHL,2}},
@@ -63,7 +63,7 @@ std::map<std::string, std::pair<uint8_t, uint8_t>> opcodes = {
    {"DEC", {OP_DEC,1}},
    {"PUSH", {OP_PUSH,1}},
    {"POP", {OP_POP,1}},
-   {"BAND", {OP_BAND,2}},
+   {"AND", {OP_AND,2}},
    {"HOST", {OP_HOST,0}},
    {"VPUSH", {OP_VPUSH,2}},
    {"VPOP", {OP_VPOP,2}},
@@ -77,7 +77,8 @@ std::map<std::string, std::pair<uint8_t, uint8_t>> opcodes = {
    {"LT", {OP_LT,2}},
    {"GE", {OP_GE,2}},
    {"LE", {OP_LE,2}},
-   {"NEG", {OP_NEG,1}}
+   {"NEG", {OP_NEG,1}},
+   {"ORL", {OP_OR,2}}
 };
 
 // every location in the code that referenced a label

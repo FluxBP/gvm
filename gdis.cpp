@@ -63,8 +63,8 @@ public:
          case OP_OR:
             disasm("OR", stk ? 0 : 2);
             break;
-         case OP_AND:
-            disasm("AND", stk ? 0 : 2);
+         case OP_ANDL:
+            disasm("ANDL", stk ? 0 : 2);
             break;
          case OP_XOR:
             disasm("XOR", stk ? 0 : 2);
@@ -90,8 +90,8 @@ public:
          case OP_POP:
             disasm("POP", 1);
             break;
-         case OP_BAND:
-            disasm("BAND", stk ? 0 : 2);
+         case OP_AND:
+            disasm("AND", stk ? 0 : 2);
             break;
          case OP_HOST:
             disasm("HOST", 0);
@@ -134,6 +134,9 @@ public:
             break;
          case OP_NEG:
             disasm("NEG", stk ? 0 : 1);
+            break;
+         case OP_ORL:
+            disasm("ORL", stk ? 0 : 2);
             break;
          default:
             std::cout << "UNKNOWN_OPCODE_" << int(opcode) << std::endl;

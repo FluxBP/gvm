@@ -34,6 +34,20 @@
   This is basically a hack of the code it is based on to produce the GASM
   program string. There's a bunch of dead code and meaningless values generated
   because we are not interested in actually evaluating the expression.
+
+  Precedence (higher to lower):
+
+    11:  ~, ! (Bitwise Inversion, Logical Negation)
+    10:  *, /, % (Multiplication, Division, Modulus)
+     9:  +, - (Addition, Subtraction)
+     8:  <<, >> (Bitwise Shifts)
+     7:  <, <=, >, >= (Relational Operators)
+     6:  ==, != (Equality Operators)
+     5:  & (Bitwise AND)
+     4:  ^ (Bitwise XOR)
+     3:  | (Bitwise OR)
+     2:  && (Logical AND)
+     1:  || (Logical OR)
 */
 
 #include <iostream>
@@ -170,8 +184,9 @@ std::deque<Token> exprToTokens(const std::string& expr) {
             switch (c2) {
             case '|':   // ||
                opsz = 2;
-               //break;   || and | generate the same opcode ('OR')
-            default:    // just |
+               t = Token::Type::Operator;      precedence = 1; break;
+               break;
+            default:    // |
                t = Token::Type::Operator;      precedence = 3; break;
                break;
             }
@@ -449,10 +464,10 @@ std::string expressionToGASM(const std::string& expr, bool lf) {
             case '&':
                switch (c2) {
                case '&':   // &&
-                  ossg << "BAND" << sep;
+                  ossg << "ANDL" << sep;
                   stack.push_back(Token { Token::Type::Number, zero });
                   break;
-               case ' ':    // just &
+               case ' ':   // just &
                   ossg << "AND" << sep;
                   stack.push_back(Token { Token::Type::Number, zero });
                   break;
@@ -464,8 +479,10 @@ std::string expressionToGASM(const std::string& expr, bool lf) {
             case '|':
                switch (c2) {
                case '|':   // ||
-                  //break;   || and | behave identically
-               case ' ':    // just |
+                  ossg << "ORL" << sep;
+                  stack.push_back(Token { Token::Type::Number, zero });
+                  break;
+               case ' ':    // |
                   ossg << "OR" << sep;
                   stack.push_back(Token { Token::Type::Number, zero });
                   break;

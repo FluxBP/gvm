@@ -30,14 +30,6 @@
 
   - ISTACK / OSTACK bits supported on their own (or just use 1 bit for both)
 
-  - change BAND to AND    (&)
-  - change AND to LAND    (&&)
-  - add LOR (||)
-  - change expr to treat | and || differently
-    producing OR| and LOR||
-  - update gasm.cpp opcodes
-  - update gdis.cpp opcodes
-
 */
 
 #include <cstdint>
@@ -72,7 +64,7 @@ enum : uint8_t {
    OP_DIV         = 7,
    OP_MOD         = 8,
    OP_OR          = 9,
-   OP_AND         = 10,
+   OP_ANDL        = 10,
    OP_XOR         = 11,
    OP_NOT         = 12,
    OP_SHL         = 13,
@@ -81,7 +73,7 @@ enum : uint8_t {
    OP_DEC         = 16,
    OP_PUSH        = 17,
    OP_POP         = 18,
-   OP_BAND        = 19,
+   OP_AND         = 19,
    OP_HOST        = 20,
    OP_VPUSH       = 21,
    OP_VPOP        = 22,
@@ -95,7 +87,8 @@ enum : uint8_t {
    OP_LT          = 30,
    OP_GE          = 31,
    OP_LE          = 32,
-   OP_NEG         = 33
+   OP_NEG         = 33,
+   OP_ORL         = 34
 };
 
 const uint8_t REG_PTR = 0x80; // misnomer: this is a pointer to the memory (io)
@@ -302,12 +295,12 @@ public:
             op1 = pop();
             push(op1 | op2);
             break;
-         case OP_AND:
+         case OP_ANDL:
             op1 = read();
             op2 = read();
             R = op1 && op2;
             break;
-         case OP_AND | STACK:
+         case OP_ANDL | STACK:
             op2 = pop();
             op1 = pop();
             R = op1 && op2;
@@ -366,12 +359,12 @@ public:
             op1 = read();
             get(op1) = pop();
             break;
-         case OP_BAND:
+         case OP_AND:
             op1 = read();
             op2 = read();
             R = op1 & op2;
             break;
-         case OP_BAND | STACK:
+         case OP_AND | STACK:
             op2 = pop();
             op1 = pop();
             push(op1 & op2);
@@ -514,6 +507,16 @@ public:
          case OP_NEG | STACK:
             op1 = pop();
             push(~op1);
+            break;
+         case OP_ORL:
+            op1 = read();
+            op2 = read();
+            R = op1 || op2;
+            break;
+         case OP_ORL | STACK:
+            op2 = pop();
+            op1 = pop();
+            push(op1 || op2);
             break;
          default:
             term = ERR_OPCODE;
